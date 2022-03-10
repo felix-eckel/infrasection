@@ -22,12 +22,8 @@ HOUR = 3600
 DAY  = 86400
 MIN  = 60
 
-def rolling_rms(x, N):
-    xc = np.cumsum(abs(x)**2);
-    return np.sqrt((xc[N:] - xc[:-N]) / N)
-
 def get_requests(csv):
-    return zip(csv["network"].values.tolist(), csv["station"].values.tolist())
+    return zip(csv[1].values.tolist(), csv[2].values.tolist())
 
 def main():
     # input parameters
@@ -35,9 +31,8 @@ def main():
     
     # processing queue and meta data
     csv        = read_csv(config["stationlist"], delimiter=" ",
-                        header=None, names=["client", "network", "station",
-                                            "starttime", "endtime"])
-    n          = len(csv['station'].values)
+                        header=None, usecols=[1,2])
+    n          = len(csv[2].values)
     stations   = read_json(config["metafile"])
     target     = read_json(config["targetfile"], typ='series')
     lat        = target["Latitude"]
@@ -103,7 +98,7 @@ def main():
         
         times = utils.get_times(tr, starttime)
         times = times[int(rms_len/2):int(len(times)-(rms_len/2))]
-        data  = rolling_rms(tr.data, rms_len)
+        data  = utils.rolling_rms(tr.data, rms_len)
         data  = data/np.max(data)
         
         # add shifted data (^2) according to semblance coordinate

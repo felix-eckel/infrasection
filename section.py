@@ -30,10 +30,9 @@ def main():
     
     # processing queue and meta data
     csv        = read_csv(config["stationlist"], delimiter=" ",
-                        header=None, names=["client", "network", "station",
-                                            "starttime", "endtime"])
-    requests   = zip(csv["network"].values.tolist(),
-                   csv["station"].values.tolist())
+                        header=None, usecols=[1,2])
+    requests   = zip(csv[1].values.tolist(),
+                   csv[2].values.tolist())
     n          = len(csv['station'].values)
     stations   = read_json(config["metafile"])
     target     = read_json(config["targetfile"], typ='series')
