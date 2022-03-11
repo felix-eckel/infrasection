@@ -16,7 +16,7 @@ from obspy.geodetics.base import gps2dist_azimuth
 from glob import glob
 import utils
 
-mpl.style.use('./style/jupyter-dark')
+mpl.style.use('./style/jupyter-dark.mplstyle')
 
 HOUR = 3600
 DAY  = 86400
@@ -44,15 +44,15 @@ def main():
     endtime    = starttime + DAY
     
     # resampling rate
-    rsr        = 1/config["resampling"]
-    rms_len    = int(np.round(config["rms_length"]/rsr))
+    rsr        = config["resampling"]
+    rms_len    = int(np.round(config["rms_length"]*rsr))
     
     # semblance parameters
     lons       = np.arange(-180, 180, 1)
     lats       = np.arange(-90, 90, 1)
     vel        = config["velocity"]
     
-    semblance = np.zeros((int(DAY/rsr), len(lons), len(lats)))
+    semblance = np.zeros((int(DAY*rsr), len(lons), len(lats)))
     n_semb = np.zeros((len(lons), len(lats)))
     
     # iterate over stations
@@ -87,7 +87,7 @@ def main():
         # bandpass filter
         st.filter('bandpass', freqmax=1/config["filter_up"],
                   freqmin=1/config["filter_low"])
-        st.resample(config["resampling"])
+        st.resample(rsr)
         
         tr    = st[0]
         
@@ -99,7 +99,6 @@ def main():
         times = utils.get_times(tr, starttime)
         times = times[int(rms_len/2):int(len(times)-(rms_len/2))]
         data  = utils.rolling_rms(tr.data, rms_len)
-        data  = data/np.max(data)
         
         # add shifted data (^2) according to semblance coordinate
         for i, lo in enumerate(lons):

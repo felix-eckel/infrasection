@@ -38,6 +38,7 @@ def main():
     target     = read_json(config["targetfile"], typ='series')
     lat        = target["Latitude"]
     lon        = target["Longitude"]
+    rsr        = config["resampling"]
     
     # load x days of data from 5 h prior to the event
     starttime  = UTCDateTime(target["Date"]) - config["leading_hours"]*HOUR
@@ -82,7 +83,7 @@ def main():
         # bandpass filter
         st.filter('bandpass', freqmax=1/config["filter_up"],
                   freqmin=1/config["filter_low"])
-        st.resample(config["resampling"])
+        st.resample(rsr)
         
         tr    = st[0]
         
@@ -107,7 +108,6 @@ def main():
             # get sta/lta parameters
             sta     = config["sta_length"]
             lta     = config["lta_length"]
-            rsr     = config["resampling"]
             
             times   = utils.get_times(tr, starttime)
             
@@ -119,7 +119,7 @@ def main():
                                         nlta=int(lta*rsr))
             
             # the first lta window length has no useful data
-            omit    = int(config["lta_length"]*config["resampling"])
+            omit    = int(config["lta_length"]*rsr)
             times   = times[omit:]
             data    = data[omit:]
             

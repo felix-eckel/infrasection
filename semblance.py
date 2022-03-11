@@ -15,7 +15,7 @@ from obspy.geodetics.base import gps2dist_azimuth
 from obspy.signal.trigger import classic_sta_lta
 import utils
 
-mpl.style.use('./style/jupyter-dark')
+mpl.style.use('./style/jupyter-dark.mplstyle')
 
 HOUR = 3600
 DAY  = 86400
@@ -34,7 +34,7 @@ def main():
                         header=None, usecols=[1,2])
     requests    = zip(csv[1].values.tolist(),
                     csv[2].values.tolist())
-    n           = len(csv['station'].values)
+    n           = len(csv[2].values)
     stations    = read_json(config["metafile"])
     target      = read_json(config["targetfile"], typ='series')
     lat         = target["Latitude"]
@@ -47,14 +47,14 @@ def main():
     endtime     = starttime + DAY*config["days"]
     
     # resampling rate
-    rsr         = 1/config["resampling"]
-    rms_len     = int(np.round(config["rms_length"]/rsr))
+    rsr         = config["resampling"]
+    rms_len     = int(np.round(config["rms_length"]*rsr))
     xdays       = config["days"]
     ticksperday = config["ticks_per_day"]
     interval    = 24/ticksperday
     
     vels = np.arange(150, 600, 1)
-    semblance = np.zeros((int(xdays*DAY/rsr), len(vels)))
+    semblance = np.zeros((int(xdays*DAY*rsr), len(vels)))
     n_semb = np.zeros(len(vels))
     for j, request in enumerate(requests):
         sys.stdout.write(\
@@ -100,7 +100,6 @@ def main():
         times = utils.get_times(tr, starttime)
         times = times[int(rms_len/2):int(len(times)-(rms_len/2))]
         data  = rolling_rms(tr.data, rms_len)
-        data  = data/np.max(data, axis=None) 
         
         # add shifted data (^2) according to semblance velocity
         for i, vel in enumerate(sorted(vels)):
@@ -118,6 +117,8 @@ def main():
     
     # rms semblance
     semblance = np.sqrt(semblance / n_semb)
+    # np.save('semblance.npy', semblance)
+    semblance = np.load('semblance.npy')
         
     # initialize figure
     fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(12,10), sharex=True,
@@ -125,7 +126,7 @@ def main():
     
     # create grids and prepare data
     times             = np.arange(starttime.timestamp,
-                                  (starttime+xdays*DAY).timestamp, rsr)
+                                  (starttime+xdays*DAY).timestamp, 1/rsr)
     velgrid, timegrid = np.meshgrid(vels, times)
     semblance_norm    = (semblance / (np.max(semblance, axis=None)))
     
@@ -137,7 +138,7 @@ def main():
     i_t, i_v = int(i_t), int(i_v)
     
     # search for origin time (first arrival) within 3 h around semblance max
-    search_win  = np.arange(int(i_t-7200/rsr),int(i_t+7200/rsr))
+    search_win  = np.arange(int(i_t-7200*rsr),int(i_t+7200*rsr))
     semb_search = semblance[search_win,i_v]
     
     # "on"-threshold for sta/lta based on 67th percentile of semblance
@@ -163,8 +164,8 @@ def main():
     # plot velocity trace with maximum semblance to subplot
     axs[1].plot(times, semblance[:, i_v])
     axs[1].annotate(timefmt, (times[i_trigger], semblance[i_trigger,i_v]),
-                    xytext=(times[i_trigger]-10000,
-                            semblance[i_t_on, i_v]+500),
+                    xytext=(times[i_trigger]-7000,
+                            semblance[i_t_on, i_v]*1.2),
                     arrowprops={'arrowstyle': 'simple', 'facecolor': 'white',
                                 'lw': 0}, fontsize=22)
     
@@ -172,7 +173,7 @@ def main():
     axs[1].set_ylim(0, max(semblance[:,i_v])*1.1)
     axs[1].text(.99, .93, 'rms "semblance" at {} m/s'.format(vels[i_v]),
                 transform=axs[1].transAxes, ha='right', fontsize=22, va='top')
-    axs[1].set_ylabel('rms "semblance"')
+    axs[1].set_ylabel('rms\n"semblance"')
     for spine in axs[1].spines:
         axs[1].spines[spine].set_visible(True)
     xticks      = [((starttime-offset) + h).timestamp \
@@ -213,7 +214,7 @@ def main():
     
     # finalize and save
     plt.subplots_adjust(hspace=0)
-    plt.savefig('semblance.png', dpi=600)
+    # plt.savefig('semblance.png', dpi=600)
 
 if __name__ == "__main__":
     main()
