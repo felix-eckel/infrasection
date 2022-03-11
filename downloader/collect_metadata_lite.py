@@ -1,8 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 11 11:28:05 2022
+Requests station availability and station meta data from all available
+EIDA nodes globally in a given time period and writes the return to files.
+Requests *DF (infrasound) channels.
 
-@author: felix
+Usage: 
+    use the download.cfg input file to specify a start and end date as well
+    as paths where to write the meta info .json file and download input file.
+
+@author: felix.eckel@ifg.uni-kiel.de
+March 2022
+
+Based on the works of M. Timkó (Institute of Earth Physics and Space Science)
 """
 import configparser
 from obspy import UTCDateTime
