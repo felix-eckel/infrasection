@@ -32,7 +32,7 @@ def run():
     # various parameters
     input_file      = config.get("DOWNLOAD", "station_list_path")
     processing      = config.getboolean("PROCESSING", "processing")
-    name_ext        = "VEL" if config["processing"] else "RAW"
+    name_ext        = "VEL" if processing else "RAW"
     token           = config.get("DOWNLOAD", "token_path")
     component       = "F"
     channels        = config.get("DOWNLOAD",
@@ -155,7 +155,11 @@ def run():
                         # get samples in stream
                         samples = np.sum([tr.count() for tr in waveform])
                         # get max gap in stream
-                        gap = max([g[-1] for g in waveform.get_gaps()])
+                        gaps = waveform.get_gaps()
+                        if len(gaps) > 0:
+                            gap = max([g[-1] for g in gaps])
+                        else:
+                            gap = 0
                         
                         # assess waveform quality
                         if not (gap < waveform[0].stats.sampling_rate*max_gap \
@@ -181,7 +185,7 @@ def run():
                     raise Inventory_problem(row["network"], row["station"], t)
                 elif (not quality):
                     raise Quality_error(row["network"], row["station"], t)
-                raise Unknown_problem(row["network"], row["station"], t)
+                # raise Unknown_problem(row["network"], row["station"], t)
                 
                 # process waveform
                 
@@ -190,7 +194,7 @@ def run():
                 processing = ""
                 
                 try:
-                    if config["processing"]:
+                    if processing:
                         # detrend
                         processing += "Detrend -> "
                         waveform.detrend(type='linear')
@@ -244,7 +248,7 @@ def run():
                     processing += "processing time: {} sec".format(proc_time)
                     
                 except:
-                    processing_time = timeit.default_timer() - start_proc
+                    proc_time = timeit.default_timer() - start_proc
                 
                 # handle exceptions and erros
                 if ((~np.isfinite(waveform.data)).any()):
@@ -261,7 +265,7 @@ def run():
                 
                 logger.info("{}::{}::{}".format(message,
                                                 timeit.default_timer()-start,
-                                                processing_time))
+                                                proc_time))
             except FDSN_error as e:
                 print(e)
                 logger.info("{}::{}::{}".format(message,
@@ -292,10 +296,10 @@ def run():
                 logger.info("{}::{}::{}".format(message,
                                                 timeit.default_timer()-start,
                                                 -6))
-            except:
-                logger.info("{}::{}::{}".format(message,
-                                                timeit.default_timer()-start,
-                                                -7))
+            # except:
+            #     logger.info("{}::{}::{}".format(message,
+            #                                     timeit.default_timer()-start,
+            #                                     -7))
             # go to next request interval
             t += dt
             
