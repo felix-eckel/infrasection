@@ -13,7 +13,9 @@ Plots a semblance analysis for various velocities. Shifts traces by distance and
 Similar to semblance.py but instead of searching for velocities from a given origin it searches for the origin itself with a given velocity.
 
 ## Usage
-define parameters in infrasection.cfg. Run __main__ on the scripts.
+Download data with the scripts provided in "download".
+
+Define parameters in infrasection.cfg. Run __main__ on the scripts (section, semblance, semblance_map).
 
 ## Data
 data is expected to be stored in the data directory given in infrasection.cfg - data_directory.
