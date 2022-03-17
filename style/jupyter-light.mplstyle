@@ -1,0 +1,26 @@
+axes.facecolor     : 1,1,1
+savefig.facecolor  : 1,1,1
+figure.facecolor   : 1,1,1
+text.color         : 0.152,0.152,0.152
+axes.labelcolor    : 0.152,0.152,0.152
+xtick.color        : 0.152,0.152,0.152
+ytick.color        : 0.152,0.152,0.152
+axes.edgecolor     : 0.152,0.152,0.152
+axes.titlecolor    : 0.152,0.152,0.152
+lines.color        : 0.152,0.152,0.152
+axes.prop_cycle    : cycler(color=['0.152,0.152,0.152'])
+image.cmap         : plasma
+
+font.family        : sans-serif
+font.sans-serif    : Lato
+font.weight        : 300
+axes.titleweight   : 300
+axes.titlelocation : right
+axes.titlesize     : 32
+axes.labelsize     : 22
+axes.labelweight   : 300
+xtick.labelsize    : 14
+ytick.labelsize    : 14
+savefig.bbox       : tight
+axes.spines.right  : False
+axes.spines.top    : False
