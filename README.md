@@ -7,10 +7,10 @@ plot global infrasound sections and perform semblance analysis
 Plots a global section of waveforms either as raw waveform, root-mean-square amplitudes or STA/LTA characteristic function.
 
 ### semblance.py
-Plots a semblance analysis for various velocities. Shifts traces by distance and velocity from a given target and calculates a semblance out of the stacked traces.
+Plots a semblance analysis for various velocities. Shifts traces by distance and velocity from a given target and calculates a semblance out of the stacked traces. An example output image can be found in the exampels directory.
 
 ### semblance_map.py
-Similar to semblance.py but instead of searching for velocities from a given origin it searches for the origin itself with a given velocity.
+Similar to semblance.py but instead of searching for velocities from a given origin it searches for the origin itself with a given velocity. An example output image can be found in the exampels directory. An example output image can be found in the exampels directory.
 
 ### Download
 This repository comes with a lite version of a continuous waveform downloader.
