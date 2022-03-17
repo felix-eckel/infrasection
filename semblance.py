@@ -15,7 +15,7 @@ from obspy.geodetics.base import gps2dist_azimuth
 from obspy.signal.trigger import classic_sta_lta
 import utils
 
-mpl.style.use('./style/jupyter-dark.mplstyle')
+mpl.style.use('./style/jupyter-light.mplstyle')
 
 HOUR = 3600
 DAY  = 86400
@@ -166,7 +166,7 @@ def main():
     axs[1].annotate(timefmt, (times[i_trigger], semblance[i_trigger,i_v]),
                     xytext=(times[i_trigger]-7000,
                             semblance[i_t_on, i_v]*1.2),
-                    arrowprops={'arrowstyle': 'simple', 'facecolor': 'white',
+                    arrowprops={'arrowstyle': 'simple', 'facecolor': 'C1',
                                 'lw': 0}, fontsize=22)
     
     # subplot decorators

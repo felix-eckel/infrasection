@@ -17,7 +17,7 @@ import numpy as np
 import sys
 import utils
 
-mpl.style.use('./style/jupyter-dark')
+mpl.style.use('./style/jupyter-dark.mplstyle')
 
 CIRC_EARTH = 40008000
 HOUR       = 3600
@@ -33,7 +33,7 @@ def main():
                         header=None, usecols=[1,2])
     requests   = zip(csv[1].values.tolist(),
                    csv[2].values.tolist())
-    n          = len(csv['station'].values)
+    n          = len(csv[2].values)
     stations   = read_json(config["metafile"])
     target     = read_json(config["targetfile"], typ='series')
     lat        = target["Latitude"]
@@ -104,7 +104,7 @@ def main():
             times   = times[int(rms_len/2):len(times)-int(rms_len/2)]
             
         # get STA/LTA characteristic function
-        elif config["plotting_type"] == 2:
+        elif config["plotting_type"] >= 2:
             # get sta/lta parameters
             sta     = config["sta_length"]
             lta     = config["lta_length"]
@@ -128,7 +128,7 @@ def main():
                                     config["threshold_off"])
             
             # plot triggers if they exist
-            if len(trigger) > 0:
+            if len(trigger) > 0 and config["plotting_type"] == 3:
                 ax.plot(times[trigger[:,0]], np.ones(len(trigger[:,0]))*dist,
                         'o', ms=6, mec='none',
                         mfc=mpl.cm.get_cmap('plasma', 9)(4), alpha=.25,
@@ -141,7 +141,7 @@ def main():
         ax.fill_between(times, np.ones(len(times))*dist, data,
                         facecolor=mpl.rcParams['figure.facecolor'], 
                         zorder=180-dist)
-        ax.plot(times, data, color='white', lw=.1, zorder=180-dist)
+        ax.plot(times, data, color='C1', lw=.1, zorder=180-dist)
         
     # custom plotting parameters
     xdays       = config["days"]
@@ -185,7 +185,7 @@ def main():
     # indicate midnight by vertical lines
     for xday in range(1, xdays+1):
         ax.vlines(x=xday*DAY-offset, ymin=0, ymax=180, lw=1,
-                  color='white', alpha=.4, zorder=-1)
+                  color='C1', alpha=.4, zorder=-1)
         
     # set x axis tick labels
     ax.tick_params(axis='x', which='both', labelrotation=45)
@@ -201,8 +201,8 @@ def main():
     ax.set_xticklabels(ticklabels)
     
     # set axes limits
-    if config["plotting_type"] == 2:
-        ax.set_xlim(config["lta_length"]+config["sta_length"], (24*xdays)*HOUR)
+    if config["plotting_type"] > 1:
+        ax.set_xlim(config["lta_length"], (24*xdays)*HOUR)
     else:
         ax.set_xlim(0, (24*xdays)*HOUR)
     ax.set_ylim(0, 180)
@@ -220,22 +220,32 @@ def main():
         title_str = 'rms amplitude'
         
     # STA/LTA characteristic function
-    elif config["plotting_type"] == 2:
+    elif config["plotting_type"] > 1:
         title_str = 'characteristic function'
         
         # create a legend
-        ax_legend = fig.add_axes([.85, .02, .14, .07])
+        if config["plotting_type"] == 3:
+            ax_legend = fig.add_axes([.84, .02, .14, .07])
+            ax_legend.plot(0, 0, 'o', ms=8,
+                           color=mpl.cm.get_cmap('plasma', 9)(4), mec='none')
+            ax_legend.text(1.3, 0, 'STA/LTA trigger', ha='right', va='center')
+            text_y = -1
+        else:
+            ax_legend = fig.add_axes([.84, .02, .14, .035])
+            text_y = -.8
         ax_legend.set_xticks([])
         ax_legend.set_yticks([])
-        ax_legend.plot(0, 0, 'o', ms=8, color=mpl.cm.get_cmap('plasma', 9)(4),
-                       mec='none')
-        ax_legend.text(1.3, 0, 'STA/LTA trigger', ha='right', va='center')
-        ax_legend.text(-.07, -1, 'STA: 5 min', ha='left', va='center')
-        ax_legend.text(1.3, -1, 'LTA: 4 h', ha='right', va='center')
+        sta_text = "STA: {}".format(utils.fmt_time(config["sta_length"]))
+        lta_text = "LTA: {}".format(utils.fmt_time(config["lta_length"]))
+        ax_legend.text(-.07, text_y, sta_text, ha='left', va='center')
+        ax_legend.text(1.3, text_y, lta_text, ha='right', va='center')
         ax_legend.set_xlim([-.3, 1.5])
         ax_legend.set_ylim([-2, 1])
         for spine in ax_legend.spines:
             ax_legend.spines[spine].set_visible(True)
+        
+    for spine in ax.spines:
+        ax.spines[spine].set_zorder(1000)
         
     ax.set_title(title_str, pad=52, loc='right', fontsize=32)
     ax.text(1, 1.01, '{}\n{}'.format(target["Comment"],

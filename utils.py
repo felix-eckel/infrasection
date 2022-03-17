@@ -17,6 +17,22 @@ def get_times(tr, starttime):
     offset = tr.stats.starttime - starttime
     return tr.times() + offset
 
+def fmt_time(t):
+    if t < 60:
+        return "{:d} s".format(int(np.round(t)))
+    elif t < 5400:
+        t = t/60
+        if t%1 == 0:
+            return "{:d} min".format(int(t))
+        else:
+            return "{:.1f} min".format(np.round(t, decimals=1))
+    else:
+        t = t/3600
+        if t%1 == 0:
+            return "{:d} h".format(int(t))
+        else:
+            return "{:.1f} h".format(np.round(t, decimals=1))
+
 def read_config(configfile):
     config = configparser.ConfigParser()
     config.read(configfile)
