@@ -175,6 +175,9 @@ def run():
                         fdsn = False
                     except Quality_error:
                         quality = False
+                    except:
+                        raise Unknown_problem(row["network"],
+                                              row["station"], t)
                 
                 # handle exceptions and errors
                 if(not fdsn):
