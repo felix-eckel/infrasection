@@ -129,10 +129,17 @@ def main():
             
             # plot triggers if they exist
             if len(trigger) > 0 and config["plotting_type"] == 3:
-                ax.plot(times[trigger[:,0]], np.ones(len(trigger[:,0]))*dist,
+                ax.plot(times[trigger[:, 0]], np.ones(len(trigger[:,0]))*dist,
                         'o', ms=6, mec='none',
                         mfc=mpl.cm.get_cmap('plasma', 9)(4), alpha=.25,
                         zorder=181)
+
+            print("\nNetwok, Station")
+            print(st[0].stats.network, st[0].stats.station)
+            print(len(data))
+            if len(data) == 0:
+                print("Length of data is zero")
+                continue
             
         # normalize data to 0 - 4 (or -4 - 4) and add distance
         data = data / (np.max(data)*.25) + dist
