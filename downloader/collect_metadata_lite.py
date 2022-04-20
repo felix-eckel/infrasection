@@ -23,7 +23,7 @@ import json
 def run():
     # read config
     config = configparser.ConfigParser()
-    config.read("./download.cfg")
+    config.read("./download_20220115_LD.cfg")
     
     start_date      = config.get("METADATA", "start_date")
     end_date        = config.get("METADATA", "end_date")
@@ -41,8 +41,8 @@ def run():
         try:
             client = Client(node)
             
-            # get all globally available stations for channel *DF
-            inv = client.get_stations(network="*", channel="?DF",
+            # get all globally available stations for channel *DF,
+            inv = client.get_stations(network="*", channel="LD?",
                                       starttime=start_date, endtime=end_date,
                                       latitude=0, longitude=0, level="station",
                                       maxradius=180)

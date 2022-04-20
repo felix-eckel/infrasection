@@ -27,14 +27,14 @@ from obspy.clients.fdsn import Client
 def run():
     # read config
     config = configparser.ConfigParser()
-    config.read("./download_20220115.cfg")
+    config.read("./download_20220115_LD.cfg")
     
     # various parameters
     input_file      = config.get("DOWNLOAD", "station_list_path")
     processing      = config.getboolean("PROCESSING", "processing")
     name_ext        = "VEL" if processing else "RAW"
     token           = config.get("DOWNLOAD", "token_path")
-    component       = "F"
+    component       = "LD"
     channels        = config.get("DOWNLOAD",
                                  "channels").replace(' ','').split(',')
     date_fmt        = "%Y%m%d"
@@ -125,7 +125,7 @@ def run():
                 
                 # iterate over channels
                 for channel in channels:
-                    con = "{}DF".format(channel)
+                    con = "LD{}".format(channel)
                     
                     # initialize flags and container
                     quality = True
@@ -142,6 +142,7 @@ def run():
                             endtime = t + dt, 
                             attach_response = False
                         )
+                        print("SOH:", waveform)
                         inventory = clients[row["client"]].get_stations(
                             network = row["network"], 
                             station = row["station"], 
@@ -160,7 +161,8 @@ def run():
                             gap = max([g[-1] for g in gaps])
                         else:
                             gap = 0
-                        
+
+                        print("GAP POINTS:", gap)
                         # assess waveform quality
                         if not (gap < waveform[0].stats.sampling_rate*max_gap \
                             and samples / (waveform[0].stats.sampling_rate*dt)\
@@ -173,6 +175,7 @@ def run():
                         
                     except FDSNException:
                         fdsn = False
+                        # fdsn = True
                     except Quality_error:
                         quality = False
                     except:
@@ -193,65 +196,65 @@ def run():
                 # process waveform
                 
                 # logging
-                start_proc = timeit.default_timer()
-                processing = ""
-                
-                try:
-                    if processing:
-                        # detrend
-                        processing += "Detrend -> "
-                        waveform.detrend(type='linear')
-                        processing += "Demean -> "
-                        waveform.detrend(type="demean")
-                        
-                        # taper
-                        processing += "Cosine type taper: 0.05 % ->"
-                        waveform.taper(type="cosine", max_percentage=0.05)
-                        
-                        # filter
-                        processing += "lowpass filter at: " \
-                            + "{} sec. ".format(anti_alias_filt) \
-                            + "Filter-order: {}, ".format(filter_order) \
-                            + "zerophase: {} -> ".format(zero_phase)
-                        waveform.filter(type="lowpass", freq=1./anti_alias_filt,
-                                        corners=filter_order,
-                                        zerophase=zero_phase)
-                        
-                        # resample
-                        if (resample \
-                            and waveform.stats.sampling_rate > sampling_rate):
-                            processing += "resample to: {} Hz -> ".format( \
-                                                              sampling_rate)
-                            waveform.interpolate(sampling_rate=sampling_rate,
-                                             method="weighted_average_slopes")
-                            
-                        # remove respones
-                        processing += "remove response -> "
-                        waveform.remove_response(inventory=inventory)
-
-                        # filter
-                        if (apply_bb_filter):
-                            processing += "bandpass filter between: " \
-                                + "{} and {} sec. ".format(bb_filter[0],
-                                                           bb_filter[1]) \
-                                + "Filter-order: {}, ".format(filter_order) \
-                                + "zerophase: {} -> ".format(zero_phase)
-                            waveform.filter(type="bandpass",
-                                            freqmin=1./bb_filter[0],
-                                            freqmax=1./bb_filter[1],
-                                            corners=filter_order,
-                                            zerophase=zero_phase)
-                    
-                    # only remove sensitivty
-                    else:
-                        processing += "remove sensitivity ->"
-                        waveform.remove_sensitivity(inventory)
-
-                    proc_time = timeit.default_timer() - start_proc
-                    processing += "processing time: {} sec".format(proc_time)
-                    
-                except:
-                    proc_time = timeit.default_timer() - start_proc
+                # start_proc = timeit.default_timer()
+                # # processing = ""
+                #
+                # try:
+                #     if processing:
+                #         # detrend
+                #         processing += "Detrend -> "
+                #         waveform.detrend(type='linear')
+                #         processing += "Demean -> "
+                #         waveform.detrend(type="demean")
+                #
+                #         # taper
+                #         processing += "Cosine type taper: 0.05 % ->"
+                #         waveform.taper(type="cosine", max_percentage=0.05)
+                #
+                #         # filter
+                #         processing += "lowpass filter at: " \
+                #             + "{} sec. ".format(anti_alias_filt) \
+                #             + "Filter-order: {}, ".format(filter_order) \
+                #             + "zerophase: {} -> ".format(zero_phase)
+                #         waveform.filter(type="lowpass", freq=1./anti_alias_filt,
+                #                         corners=filter_order,
+                #                         zerophase=zero_phase)
+                #
+                #         # resample
+                #         if (resample \
+                #             and waveform.stats.sampling_rate > sampling_rate):
+                #             processing += "resample to: {} Hz -> ".format( \
+                #                                               sampling_rate)
+                #             waveform.interpolate(sampling_rate=sampling_rate,
+                #                              method="weighted_average_slopes")
+                #
+                #         # remove respones
+                #         processing += "remove response -> "
+                #         waveform.remove_response(inventory=inventory)
+                #
+                #         # filter
+                #         if (apply_bb_filter):
+                #             processing += "bandpass filter between: " \
+                #                 + "{} and {} sec. ".format(bb_filter[0],
+                #                                            bb_filter[1]) \
+                #                 + "Filter-order: {}, ".format(filter_order) \
+                #                 + "zerophase: {} -> ".format(zero_phase)
+                #             waveform.filter(type="bandpass",
+                #                             freqmin=1./bb_filter[0],
+                #                             freqmax=1./bb_filter[1],
+                #                             corners=filter_order,
+                #                             zerophase=zero_phase)
+                #
+                #     # only remove sensitivty
+                #     else:
+                #         processing += "remove sensitivity ->"
+                #         waveform.remove_sensitivity(inventory)
+                #
+                #     proc_time = timeit.default_timer() - start_proc
+                #     processing += "processing time: {} sec".format(proc_time)
+                #
+                # except:
+                #     proc_time = timeit.default_timer() - start_proc
                 
                 # handle exceptions and erros
                 if ((~np.isfinite(waveform.data)).any()):
@@ -265,10 +268,10 @@ def run():
                 print ("save:", save)
                 waveform.write("{}/{}".format(directory, filename),
                                format='mseed')
-                
-                logger.info("{}::{}::{}".format(message,
-                                                timeit.default_timer()-start,
-                                                proc_time))
+                # TODO: Optimize processing pipeline
+                # logger.info("{}::{}::{}".format(message,
+                #                                 timeit.default_timer()-start,
+                #                                 proc_time))
             except FDSN_error as e:
                 print(e)
                 logger.info("{}::{}::{}".format(message,
