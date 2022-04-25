@@ -117,8 +117,6 @@ def main():
     
     # rms semblance
     semblance = np.sqrt(semblance / n_semb)
-    # np.save('semblance.npy', semblance)
-    semblance = np.load('semblance.npy')
         
     # initialize figure
     fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(12,10), sharex=True,
@@ -214,7 +212,7 @@ def main():
     
     # finalize and save
     plt.subplots_adjust(hspace=0)
-    # plt.savefig('semblance.png', dpi=600)
+    plt.savefig('semblance.png', dpi=600)
 
 if __name__ == "__main__":
     main()
