@@ -41,8 +41,9 @@ def read_config(configfile):
     stationlist    = config.get("DATA", "stationlist")
     metafile       = config.get("DATA", "metafile")
     targetfile     = config.get("DATA", "targetfile")
+    qc_list        = config.get("DATA", "qc_list", fallback=None)
 
-    days       = config.getint("PROCESSING", "days")
+    days       = config.getfloat("PROCESSING", "days")
     filter_up  = config.getfloat("PROCESSING", "filter_up")
     filter_low = config.getfloat("PROCESSING", "filter_low")
     rms_length = config.getint("PROCESSING", "rms_length")
@@ -68,6 +69,7 @@ def read_config(configfile):
             "stationlist":    stationlist,
             "metafile":       metafile,
             "targetfile":     targetfile,
+            "qc_list":        qc_list,
             "days":           days,
             "rms_length":     rms_length,
             "resampling":     resampling,

@@ -15,7 +15,14 @@ from obspy.geodetics.base import gps2dist_azimuth
 from obspy.signal.trigger import classic_sta_lta
 import utils
 
-mpl.style.use('./style/jupyter-light.mplstyle')
+try:
+    from cmocean import cm
+    cmap = cm.matter_r
+except ModuleNotFoundError:
+    import matplotlib.cm as cm
+    cmap = cm.plasma
+
+mpl.style.use('./style/jupyter-dark.mplstyle')
 
 HOUR = 3600
 DAY  = 86400
@@ -40,6 +47,10 @@ def main():
     lat         = target["Latitude"]
     lon         = target["Longitude"]
     
+    qc_list = config["qc_list"]
+    if qc_list is not None:
+        qc_list = read_csv(qc_list, header=None, index_col=False)[0].values
+    
     # load x days of data from 5 h prior to the event
     starttime   = UTCDateTime(target["Date"]) - config["leading_hours"]*HOUR
     starttime  -= starttime.microsecond/1000
@@ -57,6 +68,10 @@ def main():
     semblance = np.zeros((int(xdays*DAY*rsr), len(vels)))
     n_semb = np.zeros(len(vels))
     for j, request in enumerate(requests):
+        if qc_list is not None:
+            if not any([request[0] in q and request[1] in q for q in qc_list]):
+                continue
+        
         sys.stdout.write(\
     '\rprocessing file {:04d} from {} | {:04.1f} %'.format(j+1,n,
                                                           100*(j+1)/n))
@@ -89,6 +104,7 @@ def main():
         st.resample(rsr)
         
         tr    = st[0]
+        # tr.data = tr.data * qc_list.at[j,2]
         
         # get station for current data stream read meta data
         stat  = stations.at[tr.meta.station, tr.meta.network]
@@ -100,6 +116,7 @@ def main():
         times = utils.get_times(tr, starttime)
         times = times[int(rms_len/2):int(len(times)-(rms_len/2))]
         data  = rolling_rms(tr.data, rms_len)
+        data  = data / np.mean(data)
         
         # add shifted data (^2) according to semblance velocity
         for i, vel in enumerate(sorted(vels)):
@@ -129,10 +146,11 @@ def main():
     semblance_norm    = (semblance / (np.max(semblance, axis=None)))
     
     # semblance plotting
-    axs[0].pcolormesh(timegrid, velgrid, semblance_norm, shading='nearest')
+    axs[0].pcolormesh(timegrid, velgrid, semblance_norm, shading='nearest',
+                      cmap=cmap)
     
     # detection of semblance maximum
-    i_t, i_v = np.where(semblance == np.max(semblance, axis=None))
+    i_t, i_v = np.where(semblance == np.max(semblance[:,100:], axis=None))
     i_t, i_v = int(i_t), int(i_v)
     
     # search for origin time (first arrival) within 3 h around semblance max
@@ -146,8 +164,11 @@ def main():
     # calculate sta/lta on 2:24 ratio
     cft       = classic_sta_lta(semblance[:,i_v], 2, 24)
     
-    # find first arrival on a 50 sample window around threshold
-    i_trigger = np.where(cft[i_t_on-50:i_t_on]<1)[0][-1]+(i_t_on-50)
+    # find first arrival on a 50 sample window around threshold (disabled)
+    # i_trigger = np.where(cft[i_t_on-50:i_t_on]<1)[0][-1]+(i_t_on-50)
+    
+    # find maximum in semblance
+    i_trigger = np.argmax(semblance[:,i_v])
     
     # string representation of first arrival (calculated origin time of event)
     timefmt = UTCDateTime(times[i_trigger]).strftime('%H:%M')
@@ -162,7 +183,7 @@ def main():
     # plot velocity trace with maximum semblance to subplot
     axs[1].plot(times, semblance[:, i_v])
     axs[1].annotate(timefmt, (times[i_trigger], semblance[i_trigger,i_v]),
-                    xytext=(times[i_trigger]-7000,
+                    xytext=(times[i_trigger]-9000,
                             semblance[i_t_on, i_v]*1.2),
                     arrowprops={'arrowstyle': 'simple', 'facecolor': 'C1',
                                 'lw': 0}, fontsize=22)
@@ -175,12 +196,13 @@ def main():
     for spine in axs[1].spines:
         axs[1].spines[spine].set_visible(True)
     xticks      = [((starttime-offset) + h).timestamp \
-                   for h in range(0, xdays*DAY, int(interval*HOUR))]
+                    for h in range(0, int(np.floor(xdays*DAY)),
+                                   int(interval*HOUR))]
     xticklabels = [UTCDateTime(xt).strftime('%H:%M') for xt in xticks]
     axs[1].set_xticks(xticks, minor=True)
     axs[1].set_xticklabels(xticklabels, minor=True)
     xticks      = [((starttime-offset) + DAY*d).timestamp \
-                   for d in range(xdays)]
+                    for d in range(int(np.floor(xdays)))]
     xticklabels = [UTCDateTime(xt).strftime('%Y/%m/%d') for xt in xticks]
     axs[1].set_xticks(xticks)
     axs[1].set_xticklabels(xticklabels)
@@ -195,7 +217,7 @@ def main():
         axs[0].spines[spine].set_visible(True)
     axs[0].set_title('rms "semblance" analysis', pad=52)
     axs[0].text(1, 1.01, '{}\n{}'.format(target["Comment"],
-                         UTCDateTime(target["Date"]).strftime('%d %b %Y')),
+                          UTCDateTime(target["Date"]).strftime('%d %b %Y')),
             ha='right', transform=axs[0].transAxes, fontsize=22)
     axs[0].text(.8, .71, r'$S_t=\sqrt{\frac{1}{N}\sum_{i=1}^{N}f_{ti}^2}$' + \
                 '\n\n',

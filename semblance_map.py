@@ -14,6 +14,7 @@ from pandas import read_json, read_csv
 from obspy import read, UTCDateTime
 from obspy.geodetics.base import gps2dist_azimuth
 from glob import glob
+from cmocean import cm
 import utils
 
 mpl.style.use('./style/jupyter-dark.mplstyle')
@@ -54,9 +55,16 @@ def main():
     
     semblance = np.zeros((int(DAY*rsr), len(lons), len(lats)))
     n_semb = np.zeros((len(lons), len(lats)))
-    
+            
+    qc_list = config["qc_list"]
+    if qc_list is not None:
+        qc_list = read_csv(qc_list, header=None, index_col=False)[0].values
+        
     # iterate over stations
     for j, request in enumerate(get_requests(csv)):
+        if qc_list is not None:
+            if not any([request[0] in q and request[1] in q for q in qc_list]):
+                continue
         sys.stdout.write(\
     '\rprocessing file {:04d} from {} | {:04.1f} %'.format(j+1,n,
                                                           100*(j+1)/n))
@@ -88,6 +96,7 @@ def main():
         st.filter('bandpass', freqmax=1/config["filter_up"],
                   freqmin=1/config["filter_low"])
         st.resample(rsr)
+        st.taper(0.1, max_length=3600)
         
         tr    = st[0]
         
@@ -99,6 +108,10 @@ def main():
         times = utils.get_times(tr, starttime)
         times = times[int(rms_len/2):int(len(times)-(rms_len/2))]
         data  = utils.rolling_rms(tr.data, rms_len)
+        data  = data/np.mean(data)
+        if np.argmax(data) < HOUR * rsr:
+            # unresolved filtering artefact, ignore this station
+            continue
         
         # add shifted data (^2) according to semblance coordinate
         for i, lo in enumerate(lons):
@@ -123,7 +136,7 @@ def main():
     # initialize figure with cartopy
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_axes([0, 0, 1, 1],
-                      projection=ccrs.PlateCarree(central_longitude=180))
+                      projection=ccrs.Miller(central_longitude=180))
     
     # create grids and prepare data
     longrid, latgrid = np.meshgrid(lons, lats)
@@ -131,28 +144,42 @@ def main():
     
     # semblance map
     pcm = ax.pcolormesh(longrid, latgrid, semblance_norm.T,
-                        transform=ccrs.PlateCarree(), shading='nearest')
+                        transform=ccrs.PlateCarree(), shading='nearest',
+                        cmap=cm.matter_r)
+    
+    imax = np.where(semblance_norm==np.max(semblance_norm))
+    ax.plot(longrid[imax[1], imax[0]], latgrid[imax[1], imax[0]], 'o', ms=12,
+            transform=ccrs.PlateCarree())
     
     # plot stations
     for request in get_requests(csv):
+        plot_station = False
+        if qc_list is not None \
+            and any([request[0] in q and request[1] in q for q in qc_list]):
+                plot_station = True
+        else:
             file = '{}/*/{}.{}*.mseed'.format(config["data_directory"],
                                               request[0], request[1])
             search = glob(file)
             if len(search) >= 1:
-                lat = stations.at[request[1], request[0]]['latitude']
-                lon = stations.at[request[1], request[0]]['longitude']
-                ax.plot(lon, lat, '^', ms=14, color='white', mec='none',
-                        transform=ccrs.PlateCarree())
+                plot_station = True
+        if plot_station:
+            lat = stations.at[request[1], request[0]]['latitude']
+            lon = stations.at[request[1], request[0]]['longitude']
+            ax.plot(lon, lat, '^', ms=14, color='white', mec='none',
+                    transform=ccrs.PlateCarree())
                 
     # decorators
     ax.set_global()
-    ax.coastlines()
-    cax = fig.add_axes([1.01, .25, .025, .5])
+    ax.coastlines(color=mpl.rcParams['lines.color'])
+    cax = fig.add_axes([-.03, .15, .025, .7])
     cb = plt.colorbar(cax=cax, mappable=pcm)
     cb.set_label('rms semblance', fontsize=22)
+    cax.yaxis.set_ticks_position('left')
+    cax.yaxis.set_label_position('left')
     ax.set_title('rms "semblance"', pad=52, loc='right', fontsize=32)
     ax.text(1, 1.01, '{}\n{}'.format(target["Comment"],
-                         UTCDateTime(target["Date"]).strftime('%d %b %Y')),
+                          UTCDateTime(target["Date"]).strftime('%d %b %Y')),
             ha='right', transform=ax.transAxes, fontsize=22)
     plt.savefig('semblance_map.png', dpi=600)
 
