@@ -39,6 +39,9 @@ def main():
     lat        = target["Latitude"]
     lon        = target["Longitude"]
     rsr        = config["resampling"]
+    qc_list    = config["qc_list"]
+    if qc_list is not None:
+        qc_list = read_csv(qc_list, header=None, index_col=False)[0].values
     
     # load x days of data from 5 h prior to the event
     starttime  = UTCDateTime(target["Date"]) - config["leading_hours"]*HOUR
@@ -53,6 +56,10 @@ def main():
     # iterate over station queue
     for i, request in enumerate(requests):
         
+        if qc_list is not None:
+            if not any([request[0] in q and request[1] in q for q in qc_list]):
+                continue
+            
         # progress info
         s = '\rprocessing file {:04d} from {:d} | {:04.1f} %'.format(i+1, n,
                                                                    100*(i+1)/n)
@@ -98,10 +105,13 @@ def main():
             
         # rms waveform
         elif config["plotting_type"] == 1:
-            rms_len = config["rms_length"]
+            rms_len = int(config["rms_length"] * rsr)
             times   = utils.get_times(tr, starttime)
+            tmp = np.cumsum(abs(tr.data)**2)
             data    = utils.rolling_rms(tr.data, rms_len)
             times   = times[int(rms_len/2):len(times)-int(rms_len/2)]
+            if len(data) == 0:
+                continue
             
         # get STA/LTA characteristic function
         elif config["plotting_type"] >= 2:
@@ -123,6 +133,9 @@ def main():
             times   = times[omit:]
             data    = data[omit:]
             
+            if len(data) == 0:
+                continue
+            
             # evaluate trigger
             trigger = trigger_onset(data, config["threshold_on"],
                                     config["threshold_off"])
@@ -130,18 +143,30 @@ def main():
             # plot triggers if they exist
             if len(trigger) > 0 and config["plotting_type"] == 3:
                 ax.plot(times[trigger[:,0]], np.ones(len(trigger[:,0]))*dist,
-                        'o', ms=6, mec='none',
-                        mfc=mpl.cm.get_cmap('plasma', 9)(4), alpha=.25,
+                        'o', ms=6, mec='none', mfc='#DC9230', alpha=.25,
                         zorder=181)
             
         # normalize data to 0 - 4 (or -4 - 4) and add distance
+        # search for maximum within the first 18 hours (half circumference)
+        # max_search = np.where(times > (starttime + \
+        #        (18 + config['leading_hours']) * HOUR) - tr.stats.starttime)[0]
+        # if len(max_search) == 0:
+        #     max_search = None
+        # elif max_search[0] == 0:
+        #     continue
+        # else:
+        #     max_search = max_search[0]
+        #     # ignore traces that have larger spikes after the first arrival time
+        #     if np.argmax(data) > max_search:
+        #         continue
+        
         data = data / (np.max(data)*.25) + dist
         
         # plot trace as rideline
         ax.fill_between(times, np.ones(len(times))*dist, data,
                         facecolor=mpl.rcParams['figure.facecolor'], 
                         zorder=180-dist)
-        ax.plot(times, data, color='C1', lw=.1, zorder=180-dist)
+        ax.plot(times, data, color='C1', lw=.2, zorder=180-dist)
         
     # custom plotting parameters
     xdays       = config["days"]
@@ -183,7 +208,7 @@ def main():
     
     
     # indicate midnight by vertical lines
-    for xday in range(1, xdays+1):
+    for xday in range(1, int(np.floor(xdays+1))):
         ax.vlines(x=xday*DAY-offset, ymin=0, ymax=180, lw=1,
                   color='C1', alpha=.4, zorder=-1)
         
@@ -226,8 +251,7 @@ def main():
         # create a legend
         if config["plotting_type"] == 3:
             ax_legend = fig.add_axes([.84, .02, .14, .07])
-            ax_legend.plot(0, 0, 'o', ms=8,
-                           color=mpl.cm.get_cmap('plasma', 9)(4), mec='none')
+            ax_legend.plot(0, 0, 'o', ms=8, color='#DC9230', mec='none')
             ax_legend.text(1.3, 0, 'STA/LTA trigger', ha='right', va='center')
             text_y = -1
         else:
